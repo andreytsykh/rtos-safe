@@ -9,7 +9,7 @@
  * 0: volatile state only; attempts, alarm and changed PIN are lost on reboot.
  * 1: persist the security state and PIN in the external FRAM.
  */
-#define APP_PERSISTENT_STORAGE_ENABLED 0
+#define APP_PERSISTENT_STORAGE_ENABLED 1
 
 /* Shared I2C bus: SSD1306 OLED, DS1307 RTC and PN532 NFC reader. */
 #define APP_I2C_PORT            I2C_NUM_0

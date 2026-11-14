@@ -2,6 +2,19 @@
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-14
+
+### Added
+
+- Persistent failed-attempt counter and changed PIN in MB85RC256V FRAM.
+- Persistent alarm deadline calculated from the DS1307 RTC.
+- Restoration of the remaining alarm duration after an ESP32 reboot.
+
+### Changed
+
+- Enabled persistent storage by default with
+  `APP_PERSISTENT_STORAGE_ENABLED=1`.
+
 ## [1.0.0] - 2026-11-14
 
 ### Added
