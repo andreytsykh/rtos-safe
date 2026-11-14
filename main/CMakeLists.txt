@@ -1,0 +1,25 @@
+idf_component_register(
+    SRCS
+        "src/main.c"
+        "src/app_controller.c"
+        "src/safe.c"
+        "src/safe_audit.c"
+        "src/safe_display.c"
+        "src/safe_indication.c"
+        "src/safe_storage.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        esp_driver_gpio
+        esp_driver_i2c
+        esp_partition
+        freertos
+        audio
+        button
+        display
+        ds1307
+        fram
+        lock_actuator
+        nfc_reader
+        rotary_encoder
+)

@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "lock_actuator.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        esp_common
+        esp_driver_gpio
+        esp_driver_ledc
+        freertos
+)

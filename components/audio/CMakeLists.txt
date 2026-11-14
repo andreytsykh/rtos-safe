@@ -1,0 +1,14 @@
+idf_component_register(
+    SRCS
+        "audio.c"
+        "melodies.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "private"
+    REQUIRES
+        esp_common
+        esp_driver_gpio
+        esp_driver_ledc
+        esp_timer
+)
