@@ -1,0 +1,64 @@
+digraph architecture {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.35,
+        nodesep=0.35,
+        ranksep=0.42,
+        splines=ortho,
+        fontname="Arial"
+    ];
+    node [shape=box, style="rounded,filled", fontname="Arial", fontsize=12, margin="0.16,0.10", penwidth=1.3];
+    edge [color="#65758B", penwidth=1.5, arrowsize=0.8];
+
+    inputs [label="Події середовища\nенкодер · кнопка · NFC · timeout", fillcolor="#F4F6FA", color="#B9C2D0"];
+
+    periph [
+        shape=plain,
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#2F6FED">
+                <TR><TD BGCOLOR="#E8F0FF"><FONT POINT-SIZE="16"><B>Periph Layer</B></FONT></TD></TR>
+                <TR><TD>button · rotary_encoder · nfc_reader · display · ds1307 · fram · audio · lock_actuator</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    logic [
+        shape=plain,
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#805AD5">
+                <TR><TD BGCOLOR="#F0EAFE"><FONT POINT-SIZE="16"><B>Logic Layer</B></FONT></TD></TR>
+                <TR><TD><B>safe_task + FSM</B> — PIN · 3 спроби · ALARM 3 години · зміна PIN</TD></TR>
+                <TR><TD>app_controller — застосування snapshot до підсистем</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    output [
+        shape=plain,
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#2F855A">
+                <TR><TD BGCOLOR="#E5F7ED"><FONT POINT-SIZE="16"><B>Transport / Output Layer</B></FONT></TD></TR>
+                <TR><TD>OLED snapshot queue · access audit у Flash · ESP_LOG</TD></TR>
+                <TR><TD>LED + buzzer · relay + SG90</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    reliability [
+        shape=plain,
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#C05621">
+                <TR><TD BGCOLOR="#FFF0E5"><FONT POINT-SIZE="16"><B>Reliability Layer</B></FONT></TD></TR>
+                <TR><TD>FreeRTOS queues · audio mutex ≤ 20 мс · I²C bus semaphore</TD></TR>
+                <TR><TD>debounce · state timeouts · PN532 recovery · FRAM + RTC recovery</TD></TR>
+                <TR><TD><I>Окремий application WDT поки не налаштовано</I></TD></TR>
+            </TABLE>
+        >
+    ];
+
+    outputs [label="Фізичний результат\nіндикація · журнал · відкриття/закриття", fillcolor="#F4F6FA", color="#B9C2D0"];
+
+    inputs -> periph -> logic -> output -> outputs;
+    output -> reliability [style=dashed, arrowhead=none];
+}

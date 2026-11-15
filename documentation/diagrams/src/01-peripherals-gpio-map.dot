@@ -1,0 +1,61 @@
+digraph peripherals {
+    graph [
+        rankdir=LR,
+        bgcolor="white",
+        pad=0.35,
+        nodesep=0.30,
+        ranksep=0.75,
+        splines=ortho,
+        fontname="Arial"
+    ];
+    node [
+        shape=box,
+        style="rounded,filled",
+        fillcolor="#F6F8FC",
+        color="#B7C3D7",
+        penwidth=1.4,
+        fontname="Arial",
+        fontsize=13,
+        margin="0.14,0.09"
+    ];
+    edge [color="#718096", penwidth=1.5, fontname="Arial", fontsize=11];
+
+    esp [
+        shape=plain,
+        label=<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#2F6FED">
+                <TR><TD BGCOLOR="#2F6FED"><FONT COLOR="white" POINT-SIZE="17"><B>ESP32-S3 N16R8</B></FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">I²C0: SDA GPIO40 · SCL GPIO2</TD></TR>
+                <TR><TD ALIGN="LEFT">LEDC PWM: GPIO4 · GPIO9</TD></TR>
+                <TR><TD ALIGN="LEFT">GPIO/PCNT: 7, 8, 10, 11, 18, 21, 41</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    i2c [label="Спільна I²C-шина\n100 кГц", fillcolor="#E8F0FF", color="#2F6FED"];
+    oled [label="OLED SSD1306\n0x3C / 0x3D\nінтерфейс користувача"];
+    rtc [label="DS1307 RTC\n0x68\nчас і ALARM deadline"];
+    fram [label="MB85RC256V FRAM\n0x50\nPIN і лічильник спроб"];
+    nfc [label="PN532 NFC\n0x24\nадміністративна картка"];
+
+    encoder [label="Енкодер\nA: GPIO18 · B: GPIO21\nкнопка: GPIO10", fillcolor="#FFF7DF", color="#D69E2E"];
+    leds [label="LED-індикація\nчервоний: GPIO8\nжовтий: GPIO11\nзелений: GPIO41"];
+    buzzer [label="Пасивний бузер\nGPIO9 · LEDC PWM"];
+    relay [label="Реле живлення SG90\nGPIO7 через 2N2222\nactive-high після NPN"];
+    servo [label="SG90\nGPIO4 · 50 Гц PWM\n700–2300 мкс"];
+
+    { rank=same; oled; rtc; fram; nfc; }
+    { rank=same; encoder; leds; buzzer; relay; servo; }
+
+    esp -> i2c [label="GPIO40 / GPIO2"];
+    i2c -> oled;
+    i2c -> rtc;
+    i2c -> fram;
+    i2c -> nfc;
+
+    encoder -> esp [dir=back, label="PCNT + GPIO"];
+    esp -> leds [label="digital out"];
+    esp -> buzzer [label="PWM"];
+    esp -> relay [label="digital out"];
+    esp -> servo [label="PWM"];
+}

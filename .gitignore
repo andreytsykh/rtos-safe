@@ -17,9 +17,7 @@
 **/.history/
 *.lck
 *.prl
-
-# Hardware/KiCad project is kept locally and excluded from firmware releases
-hardware/
+*.kicad_prl
 
 # Log files
 *.log
@@ -27,6 +25,7 @@ hardware/
 # Build artifacts and directories
 **/build/
 build/
+build-*/
 *.o
 *.a
 *.out
@@ -48,6 +47,8 @@ sdkconfig
 managed_components/
 # If ESP-IDF tools are installed/referenced locally to the project
 .espressif/
+#tests
+test/
 
 # CMake generated files
 CMakeCache.txt

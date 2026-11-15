@@ -1,0 +1,54 @@
+digraph queues {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.35,
+        nodesep=0.42,
+        ranksep=0.52,
+        splines=ortho,
+        fontname="Arial"
+    ];
+    node [shape=box, style="rounded,filled", fillcolor="#F6F8FC", color="#B7C3D7", fontname="Arial", fontsize=11, margin="0.13,0.08"];
+    edge [color="#66758A", penwidth=1.4, arrowsize=0.75, fontname="Arial", fontsize=10];
+
+    encoder_isr [label="PCNT ISR\nенкодер"];
+    button_timer [label="button timers\ndebounce / long press"];
+    nfc_task [label="nfc_reader_task"];
+    state_timer [label="state timer"];
+
+    encoder_q [label="Encoder queue\n16 × rotary_encoder_event_t", fillcolor="#E8F0FF", color="#2F6FED"];
+    app_input [label="app_input\nадаптація CW / CCW"];
+    safe_q [label="Safe event queue\n16 × safe_event_t", fillcolor="#E8F0FF", color="#2F6FED"];
+    safe_task [label="safe_task\nєдиний власник FSM", fillcolor="#F0EAFE", color="#805AD5", penwidth=2.0];
+    controller [label="app_controller\nsnapshot → effects", fillcolor="#F0EAFE", color="#805AD5"];
+
+    display_q [label="Display queue\n1 × safe_snapshot_t\nxQueueOverwrite", fillcolor="#E5F7ED", color="#2F855A"];
+    audit_q [label="Audit queue\n8 × safe_access_attempt_t", fillcolor="#E5F7ED", color="#2F855A"];
+    actuator_q [label="Actuator queue\n1 × position\nxQueueOverwrite", fillcolor="#E5F7ED", color="#2F855A"];
+
+    display_task [label="safe_display_task\n→ OLED"];
+    audit_task [label="safe_audit_task\n→ Flash"];
+    actuator_task [label="lock_actuator_task\n→ relay + SG90"];
+
+    { rank=same; encoder_isr; encoder_q; app_input; }
+    { rank=same; button_timer; nfc_task; state_timer; }
+    { rank=same; safe_task; controller; }
+    { rank=same; display_q; audit_q; actuator_q; }
+    { rank=same; display_task; audit_task; actuator_task; }
+
+    encoder_isr -> encoder_q [label="FromISR"];
+    encoder_q -> app_input;
+    app_input -> safe_q [label="ROTATE_CW / CCW"];
+    button_timer -> safe_q [label="SHORT / LONG"];
+    nfc_task -> safe_q [label="ADMIN_RESET"];
+    state_timer -> safe_q [label="TIMEOUT"];
+    safe_q -> safe_task;
+    safe_task -> controller [label="on_update(snapshot)"];
+
+    controller -> display_q;
+    safe_task -> audit_q [label="access attempt"];
+    controller -> actuator_q [label="OPEN / LOCKED"];
+    display_q -> display_task;
+    audit_q -> audit_task;
+    actuator_q -> actuator_task;
+}

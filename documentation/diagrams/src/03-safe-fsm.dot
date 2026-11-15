@@ -1,0 +1,33 @@
+digraph safe_fsm {
+    graph [
+        rankdir=LR,
+        bgcolor="white",
+        pad=0.45,
+        nodesep=0.75,
+        ranksep=1.0,
+        splines=spline,
+        fontname="Arial"
+    ];
+    node [shape=box, style="rounded,filled", fontname="Arial", fontsize=15, penwidth=2.0, margin="0.18,0.12"];
+    edge [fontname="Arial", fontsize=11, color="#59677A", penwidth=1.6, arrowsize=0.85];
+
+    boot [shape=circle, width=0.22, label="", fillcolor="#2D3748", color="#2D3748"];
+    locked [label="LOCKED\nзамок закритий", fillcolor="#FFE9E9", color="#D64545"];
+    entering [label="ENTERING_CODE\nвведення / зміна PIN", fillcolor="#FFF5CC", color="#D69E2E"];
+    open [label="OPEN\nзамок відкритий", fillcolor="#E3F7E9", color="#2F855A"];
+    alarm [label="ALARM\nблокування 3 години", fillcolor="#FFE7DD", color="#C05621"];
+
+    boot -> locked [label="звичайний старт"];
+    boot -> alarm [label="відновлено deadline з FRAM + RTC", style=dashed];
+
+    locked -> entering [label="коротке натискання\nабо обертання енкодера"];
+    entering -> open [label="правильний PIN"];
+    entering -> alarm [label="3-тя неправильна спроба"];
+    entering -> entering [label="неправильний PIN < 3\nабо повторне введення", color="#A67C00"];
+    entering -> locked [label="long press або timeout 30 с"];
+
+    open -> locked [label="коротке натискання\nабо timeout 10 с"];
+    open -> entering [label="long press: новий PIN", color="#805AD5"];
+
+    alarm -> locked [label="timeout 3 години\nабо admin NFC card"];
+}

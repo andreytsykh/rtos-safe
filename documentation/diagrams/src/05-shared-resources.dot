@@ -1,0 +1,39 @@
+digraph resources {
+    graph [
+        rankdir=LR,
+        bgcolor="white",
+        pad=0.4,
+        nodesep=0.42,
+        ranksep=0.75,
+        splines=ortho,
+        fontname="Arial"
+    ];
+    node [shape=box, style="rounded,filled", fillcolor="#F6F8FC", color="#B7C3D7", fontname="Arial", fontsize=12, margin="0.14,0.09"];
+    edge [color="#68778B", penwidth=1.5, arrowsize=0.75, fontname="Arial", fontsize=10];
+
+    display_task [label="safe_display_task\nOLED transactions"];
+    nfc_task [label="nfc_reader_task\nPN532 polling"];
+    safe_task [label="safe_task / app_controller\nFRAM save + audio commands"];
+    audit_task [label="safe_audit_task\nRTC timestamp"];
+    timer_task [label="esp_timer task\nplayer_tick()"];
+
+    i2c_lock [label="ESP-IDF I²C bus semaphore\nвбудований у driver", fillcolor="#E8F0FF", color="#2F6FED", penwidth=2.0];
+    audio_mutex [label="audio_mutex\ncommand wait ≤ 20 мс\ntick wait = 0 мс", fillcolor="#FFF0E5", color="#C05621", penwidth=2.0];
+
+    i2c [label="Спільна I²C0\nSDA GPIO40 · SCL GPIO2", fillcolor="#E5F7ED", color="#2F855A"];
+    audio_state [label="Стан аудіоплеєра\nmelody · note · counters · playing", fillcolor="#E5F7ED", color="#2F855A"];
+
+    display_task -> i2c_lock [label="i2c_master_transmit"];
+    nfc_task -> i2c_lock [label="PN532 I²C"];
+    safe_task -> i2c_lock [label="FRAM / RTC"];
+    audit_task -> i2c_lock [label="RTC"];
+    i2c_lock -> i2c;
+
+    safe_task -> audio_mutex [label="play / stop"];
+    timer_task -> audio_mutex [label="tick"];
+    audio_mutex -> audio_state;
+
+    note [shape=note, label="Queue потрібна між tasks.\nMutex потрібен, коли два контексти\nзвертаються до одного mutable resource.", fillcolor="#FFFBEA", color="#D69E2E"];
+    note -> audio_mutex [style=dashed, arrowhead=none];
+    note -> i2c_lock [style=dashed, arrowhead=none];
+}
