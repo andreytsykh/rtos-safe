@@ -31,8 +31,6 @@ esp_err_t rotary_encoder_wait_event(
     TickType_t timeout
 );
 
-esp_err_t rotary_encoder_reset(void);
-
 #ifdef __cplusplus
 }
 #endif

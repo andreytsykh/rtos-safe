@@ -40,8 +40,6 @@ esp_err_t ds1307_set_datetime(
     const ds1307_datetime_t *dt
 );
 
-esp_err_t ds1307_deinit(ds1307_t *rtc);
-
 #ifdef __cplusplus
 }
 #endif

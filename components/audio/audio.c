@@ -80,8 +80,7 @@ static void player_tick(void *arg)
     }
 
     if (!playing || (active_melody == NULL)) {
-        xSemaphoreGive(audio_mutex);
-        return;
+        goto unlock;
     }
 
     elapsed_ms += AUDIO_TICK_MS;
@@ -90,13 +89,11 @@ static void player_tick(void *arg)
     if (playback_limit_ms > 0U &&
         playback_elapsed_ms >= playback_limit_ms) {
         finish_playback_locked();
-        xSemaphoreGive(audio_mutex);
-        return;
+        goto unlock;
     }
 
     if (elapsed_ms < active_melody->notes[current_note].duration_ms) {
-        xSemaphoreGive(audio_mutex);
-        return;
+        goto unlock;
     }
 
     elapsed_ms = 0U;
@@ -105,14 +102,15 @@ static void player_tick(void *arg)
     if (current_note >= active_melody->note_count) {
         if (!active_melody->loop) {
             finish_playback_locked();
-            xSemaphoreGive(audio_mutex);
-            return;
+            goto unlock;
         }
 
         current_note = 0U;
     }
 
     (void)set_tone(active_melody->notes[current_note].frequency_hz);
+
+unlock:
     xSemaphoreGive(audio_mutex);
 }
 

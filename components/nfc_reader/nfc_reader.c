@@ -10,14 +10,14 @@
 #include "esp_log.h"
 #include "pn532.h"
 
-#define NFC_POLL_INTERVAL_MS         250U
-#define NFC_RECOVERY_ERROR_THRESHOLD 3U
-#define NFC_TASK_STACK_SIZE          4096U
-#define NFC_TASK_PRIORITY            3U
+#define NFC_READER_POLL_INTERVAL_MS         250U
+#define NFC_READER_RECOVERY_ERROR_THRESHOLD 3U
+#define NFC_READER_TASK_STACK_SIZE          4096U
+#define NFC_READER_TASK_PRIORITY            3U
 
 static const char *TAG = "nfc_reader";
 
-static nfc_reader_config_t task_config;
+static nfc_reader_config_t reader_config;
 static TaskHandle_t task_handle;
 static pn532_bus_t *pn532_bus;
 static pn532_t *pn532_device;
@@ -31,7 +31,7 @@ static bool cards_match(
            memcmp(left->uid, right->uid, left->uid_length) == 0;
 }
 
-static void publish_card(
+static void notify_new_card(
     nfc_reader_card_t *last_card,
     bool *card_present,
     const pn532_uid_t *card
@@ -51,7 +51,7 @@ static void publish_card(
     memcpy(last_card->uid, card->uid, last_card->uid_length);
     *card_present = true;
 
-    task_config.on_card_detected(last_card, task_config.user_data);
+    reader_config.on_card_detected(last_card, reader_config.user_data);
 }
 
 static void recover_after_transport_errors(uint8_t *error_count)
@@ -60,7 +60,7 @@ static void recover_after_transport_errors(uint8_t *error_count)
         (*error_count)++;
     }
 
-    if (*error_count < NFC_RECOVERY_ERROR_THRESHOLD) {
+    if (*error_count < NFC_READER_RECOVERY_ERROR_THRESHOLD) {
         return;
     }
 
@@ -69,6 +69,54 @@ static void recover_after_transport_errors(uint8_t *error_count)
         ESP_LOGE(TAG, "PN532 recovery failed");
     }
     *error_count = 0U;
+}
+
+static void handle_poll_result(
+    pn532_poll_status_t status,
+    const pn532_uids_array_t *cards,
+    nfc_reader_card_t *last_card,
+    bool *card_present,
+    uint8_t *transport_error_count
+)
+{
+    switch (status) {
+        case PN532_POLL_FOUND:
+            *transport_error_count = 0U;
+            if (cards != NULL && cards->uids_count > 0U) {
+                notify_new_card(
+                    last_card,
+                    card_present,
+                    &cards->uids[0]
+                );
+            }
+            break;
+
+        case PN532_POLL_NO_TARGET:
+            *transport_error_count = 0U;
+            *card_present = false;
+            break;
+
+        case PN532_POLL_TRANSPORT_ERROR:
+            recover_after_transport_errors(transport_error_count);
+            break;
+
+        case PN532_POLL_TIMEOUT:
+            ESP_LOGD(TAG, "PN532 poll timed out");
+            break;
+
+        case PN532_POLL_PROTOCOL_ERROR:
+            ESP_LOGW(TAG, "PN532 protocol error");
+            break;
+
+        case PN532_POLL_NO_MEMORY:
+            ESP_LOGE(TAG, "Not enough memory to read NFC card");
+            break;
+
+        case PN532_POLL_INVALID_ARGUMENT:
+        default:
+            ESP_LOGE(TAG, "Invalid PN532 poll result: %d", (int)status);
+            break;
+    }
 }
 
 static void nfc_reader_task(void *arg)
@@ -86,48 +134,17 @@ static void nfc_reader_task(void *arg)
             &status
         );
 
-        switch (status) {
-            case PN532_POLL_FOUND:
-                transport_error_count = 0U;
-                if (cards != NULL && cards->uids_count > 0U) {
-                    publish_card(
-                        &last_card,
-                        &card_present,
-                        &cards->uids[0]
-                    );
-                }
-                break;
-
-            case PN532_POLL_NO_TARGET:
-                transport_error_count = 0U;
-                card_present = false;
-                break;
-
-            case PN532_POLL_TRANSPORT_ERROR:
-                recover_after_transport_errors(&transport_error_count);
-                break;
-
-            case PN532_POLL_TIMEOUT:
-                ESP_LOGD(TAG, "PN532 poll timed out");
-                break;
-
-            case PN532_POLL_PROTOCOL_ERROR:
-                ESP_LOGW(TAG, "PN532 protocol error");
-                break;
-
-            case PN532_POLL_NO_MEMORY:
-                ESP_LOGE(TAG, "Not enough memory to read NFC card");
-                break;
-
-            case PN532_POLL_INVALID_ARGUMENT:
-            default:
-                ESP_LOGE(TAG, "Invalid PN532 poll result: %d", (int)status);
-                break;
-        }
+        handle_poll_result(
+            status,
+            cards,
+            &last_card,
+            &card_present,
+            &transport_error_count
+        );
 
         free(cards);
         (void)pn532_set_rf_off(pn532_device);
-        vTaskDelay(pdMS_TO_TICKS(NFC_POLL_INTERVAL_MS));
+        vTaskDelay(pdMS_TO_TICKS(NFC_READER_POLL_INTERVAL_MS));
     }
 }
 
@@ -169,13 +186,13 @@ esp_err_t nfc_reader_init(const nfc_reader_config_t *config)
         (unsigned int)((firmware >> 8U) & 0xFFU)
     );
 
-    task_config = *config;
+    reader_config = *config;
     BaseType_t result = xTaskCreate(
         nfc_reader_task,
         "nfc_reader",
-        NFC_TASK_STACK_SIZE,
+        NFC_READER_TASK_STACK_SIZE,
         NULL,
-        NFC_TASK_PRIORITY,
+        NFC_READER_TASK_PRIORITY,
         &task_handle
     );
     if (result != pdPASS) {

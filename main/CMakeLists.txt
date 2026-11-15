@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "src/main.c"
         "src/app_controller.c"
+        "src/app_input.c"
         "src/safe.c"
         "src/safe_audit.c"
         "src/safe_display.c"

@@ -114,16 +114,3 @@ esp_err_t fram_write(
 
     return ESP_OK;
 }
-
-esp_err_t fram_deinit(fram_t *fram)
-{
-    if (fram == NULL || fram->i2c == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    esp_err_t error = i2c_master_bus_rm_device(fram->i2c);
-    if (error == ESP_OK) {
-        fram->i2c = NULL;
-    }
-    return error;
-}

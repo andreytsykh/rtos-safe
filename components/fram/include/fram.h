@@ -7,13 +7,12 @@
 #include "esp_err.h"
 
 #define FRAM_MB85RC256V_CAPACITY_BYTES 32768U
-#define FRAM_MB85RC256V_DEFAULT_ADDRESS 0x50U
 
 typedef struct {
     i2c_master_dev_handle_t i2c;
 } fram_t;
 
-/* The caller owns the I2C bus and keeps it alive until fram_deinit(). */
+/* The caller owns the I2C bus and keeps it alive for the component lifetime. */
 esp_err_t fram_init(
     fram_t *fram,
     i2c_master_bus_handle_t bus,
@@ -34,5 +33,3 @@ esp_err_t fram_write(
     const void *data,
     size_t size
 );
-
-esp_err_t fram_deinit(fram_t *fram);

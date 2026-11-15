@@ -182,20 +182,3 @@ esp_err_t rotary_encoder_wait_event(
         ? ESP_OK
         : ESP_ERR_TIMEOUT;
 }
-
-esp_err_t rotary_encoder_reset(void)
-{
-    if (!encoder.initialized) {
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    esp_err_t error = pcnt_unit_stop(encoder.unit);
-    if (error == ESP_OK) {
-        error = pcnt_unit_clear_count(encoder.unit);
-    }
-    if (error == ESP_OK) {
-        (void)xQueueReset(encoder.event_queue);
-        error = pcnt_unit_start(encoder.unit);
-    }
-    return error;
-}

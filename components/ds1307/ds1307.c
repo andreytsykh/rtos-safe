@@ -206,22 +206,3 @@ esp_err_t ds1307_set_datetime(
         DS1307_IO_TIMEOUT_MS
     );
 }
-
-esp_err_t ds1307_deinit(ds1307_t *rtc)
-{
-    if (!rtc) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    if (!rtc->i2c) {
-        return ESP_OK;
-    }
-
-    esp_err_t err = i2c_master_bus_rm_device(rtc->i2c);
-
-    if (err == ESP_OK) {
-        rtc->i2c = NULL;
-    }
-
-    return err;
-}

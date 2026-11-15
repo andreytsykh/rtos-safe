@@ -22,9 +22,15 @@ typedef struct {
 } safe_storage_record_t;
 
 static const char *TAG = "safe_storage";
+static const char *TEST_TAG = "SAFE_TEST";
 static safe_storage_config_t storage_config;
 static safe_storage_record_t record;
 static bool initialized;
+
+typedef struct {
+    uint64_t rtc_now_seconds;
+    bool rtc_now_valid;
+} safe_storage_restore_info_t;
 
 static bool is_leap_year(uint16_t year)
 {
@@ -103,7 +109,60 @@ static esp_err_t initialize_blank_record(void)
     return write_record();
 }
 
-static esp_err_t restore_alarm(safe_storage_state_t *state)
+static void log_hms(const char *name, uint64_t seconds)
+{
+    uint32_t seconds_of_day = (uint32_t)(seconds % 86400U);
+    uint32_t hours = seconds_of_day / 3600U;
+    uint32_t minutes = (seconds_of_day % 3600U) / 60U;
+    uint32_t secs = seconds_of_day % 60U;
+
+    ESP_LOGI(
+        TEST_TAG,
+        "%s=%02lu:%02lu:%02lu",
+        name,
+        (unsigned long)hours,
+        (unsigned long)minutes,
+        (unsigned long)secs
+    );
+}
+
+static void log_restored_state(
+    const safe_storage_state_t *state,
+    const safe_storage_restore_info_t *restore_info
+)
+{
+    ESP_LOGI(TEST_TAG, "SNAPSHOT_BEGIN");
+    ESP_LOGI(TEST_TAG, "RESTORED_ATTEMPTS=%u", state->attempts_used);
+    ESP_LOGI(
+        TEST_TAG,
+        "RESTORED_STATE=%s",
+        state->alarm_remaining_ms > 0U ? "ALARM" : "LOCKED"
+    );
+
+    if (restore_info->rtc_now_valid) {
+        log_hms("RTC_NOW", restore_info->rtc_now_seconds);
+    } else {
+        ESP_LOGI(TEST_TAG, "RTC_NOW=UNAVAILABLE");
+    }
+
+    if ((record.flags & SAFE_STORAGE_DEADLINE_VALID) != 0U) {
+        log_hms("ALARM_DEADLINE", record.alarm_deadline_seconds);
+    } else {
+        ESP_LOGI(TEST_TAG, "ALARM_DEADLINE=NONE");
+    }
+
+    ESP_LOGI(
+        TEST_TAG,
+        "REMAINING_SEC=%lu",
+        (unsigned long)(state->alarm_remaining_ms / 1000U)
+    );
+    ESP_LOGI(TEST_TAG, "SNAPSHOT_END");
+}
+
+static esp_err_t restore_alarm(
+    safe_storage_state_t *state,
+    safe_storage_restore_info_t *restore_info
+)
 {
     if (record.alarm_active == 0U) {
         return ESP_OK;
@@ -120,12 +179,17 @@ static esp_err_t restore_alarm(safe_storage_state_t *state)
         state->alarm_remaining_ms = storage_config.alarm_duration_ms;
         return ESP_OK;
     }
+    restore_info->rtc_now_seconds = now;
+    restore_info->rtc_now_valid = true;
 
     if (now >= record.alarm_deadline_seconds) {
         ESP_LOGI(TAG, "Stored alarm has expired");
+        state->attempts_used = 0U;
+        state->alarm_remaining_ms = 0U;
         record.attempts_used = 0U;
         record.alarm_active = 0U;
         record.flags = 0U;
+        record.alarm_deadline_seconds = 0U;
         return write_record();
     }
 
@@ -177,16 +241,21 @@ esp_err_t safe_storage_init(
         memcpy(state->pin, record.pin, sizeof(state->pin));
     }
 
-    error = restore_alarm(state);
+    safe_storage_restore_info_t restore_info = {0};
+    error = restore_alarm(state, &restore_info);
     if (error != ESP_OK) {
         return error;
     }
-    ESP_LOGI(
-        TAG,
-        "State restored: attempts=%u alarm_remaining_ms=%lu",
-        state->attempts_used,
-        (unsigned long)state->alarm_remaining_ms
-    );
+
+    if (!restore_info.rtc_now_valid) {
+        uint64_t now;
+        if (read_rtc_seconds(&now) == ESP_OK) {
+            restore_info.rtc_now_seconds = now;
+            restore_info.rtc_now_valid = true;
+        }
+    }
+
+    log_restored_state(state, &restore_info);
     return ESP_OK;
 }
 
@@ -217,8 +286,11 @@ esp_err_t safe_storage_save_pin(
     const uint8_t pin[SAFE_STORAGE_PIN_LENGTH]
 )
 {
-    if (!initialized || pin == NULL) {
+    if (!initialized) {
         return ESP_ERR_INVALID_STATE;
+    }
+    if (pin == NULL) {
+        return ESP_ERR_INVALID_ARG;
     }
 
     memcpy(record.pin, pin, sizeof(record.pin));
